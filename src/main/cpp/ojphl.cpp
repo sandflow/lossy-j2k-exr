@@ -170,6 +170,8 @@ ht_undo_impl (
 
     std::vector<CodestreamChannelInfo> cs_to_file_ch (decode->channel_count);
 
+    int skip_rez = static_cast<ojphl_decoder_data*>(decode->decoding_user_data)->skip_rez;
+
     /* read the channel map */
 
     size_t header_sz;
@@ -198,6 +200,8 @@ ht_undo_impl (
 
     ojph::codestream cs;
     cs.read_headers (&infile);
+
+    cs.restrict_input_resolution(skip_rez, 0);
 
     ojph::param_siz siz = cs.access_siz ();
 
@@ -364,7 +368,7 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
     if (!encode->encoding_user_data)
         return EXR_ERR_INVALID_ARGUMENT;
 
-    float q_step = static_cast<ojphl_user_data*>(encode->encoding_user_data)->q_step;
+    float q_step = static_cast<ojphl_encoder_data*>(encode->encoding_user_data)->q_step;
 
     std::vector<CodestreamChannelInfo> cs_to_file_ch (encode->channel_count);
     bool                               isRGB = make_channel_map (
@@ -405,6 +409,8 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
     }
 
     cs.set_planar (isPlanar);
+
+    cs.request_tlm_marker(true);
 
     siz.set_image_offset (ojph::point (0, 0));
     siz.set_image_extent (ojph::point (image_width, image_height));

@@ -26,33 +26,33 @@ void dif(exr_result_t r)
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
-        "ojphl_enc", "J2K lossy EXR encoder");
+        "ojphl_enc", "J2K lossy EXR decoder");
 
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
-        "epath", "Encoded image path", cxxopts::value<std::string>())(
-        "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"));
+        "dpath", "Decoded image path", cxxopts::value<std::string>())(
+        "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"));
 
-    options.parse_positional({"ipath", "epath"});
+    options.parse_positional({"ipath", "dpath"});
 
     options.show_positional_help();
 
     auto args = options.parse(argc, argv);
 
-    if (args.count("ipath") != 1 || args.count("epath") != 1)
+    if (args.count("ipath") != 1 || args.count("dpath") != 1)
     {
         std::cout << options.help() << std::endl;
         exit(-1);
     }
 
     auto &src_fn = args["ipath"].as<std::string>();
-    auto &enc_fn = args["epath"].as<std::string>();
+    auto &out_fn = args["dpath"].as<std::string>();
 
     exr_result_t r;
 
-    ojphl_encoder_data ud;
+    ojphl_decoder_data ud;
 
-    ud.q_step = args["q"].as<float>();
+    ud.skip_rez = args["s"].as<int>();
 
     /* source file */
 
@@ -68,12 +68,12 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    /* encoded file */
+    /* decoded file */
 
-    exr_context_t enc_file;
-    dif(exr_start_write(&enc_file, enc_fn.c_str(), EXR_WRITE_FILE_DIRECTLY, NULL));
+    exr_context_t out_file;
+    dif(exr_start_write(&out_file, out_fn.c_str(), EXR_WRITE_FILE_DIRECTLY, NULL));
 
-    /* copy parts to the output file */
+    /* write the decoded file header */
 
     for (int part_id = 0; part_id < partCount; part_id++)
     {
@@ -85,11 +85,20 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
+        exr_compression_t ctype;
+        dif(exr_get_compression(src_file, part_id, &ctype));
+        if (ctype != EXR_COMPRESSION_HTJ2K256 &&
+            ctype != EXR_COMPRESSION_HTJ2K32)
+        {
+            std::cout << "Only supports HTJ2K compressed files" << std::endl;
+            exit(-1);
+        }
+
         const char *pn = NULL;
         exr_get_name(src_file, part_id, &pn);
 
         int new_part_id = 0;
-        dif(exr_add_part(enc_file, pn, EXR_STORAGE_SCANLINE, &new_part_id));
+        dif(exr_add_part(out_file, pn, EXR_STORAGE_SCANLINE, &new_part_id));
 
         if (new_part_id != part_id)
         {
@@ -97,16 +106,14 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
-        dif(exr_copy_unset_attributes(enc_file, part_id, src_file, part_id));
-        dif(exr_set_compression(enc_file, part_id, EXR_COMPRESSION_HTJ2K256));
+        dif(exr_copy_unset_attributes(out_file, part_id, src_file, part_id));
+        dif(exr_set_compression(out_file, part_id, ctype));
     }
-    dif(exr_write_header(enc_file));
+    dif(exr_write_header(out_file));
 
-    /* baseband buffers */
+    /* generate the decoded file */
 
     uint8_t *baseband_bufs[MAX_PART_COUNT] = {NULL};
-
-    /* generated encoded file */
 
     for (int part_id = 0; part_id < partCount; part_id++)
     {
@@ -134,87 +141,56 @@ int main(int argc, char *argv[])
         int32_t linestride = pixelstride * width;
         baseband_bufs[part_id] = (uint8_t *)malloc(height * width * pixelstride);
 
-        /* decode */
+        /* read the source file */
 
         bool first = true;
         exr_decode_pipeline_t decoder;
-        exr_chunk_info_t dec_chunk;
+        exr_chunk_info_t src_chunk;
+        exr_encode_pipeline_t encoder;
+        exr_chunk_info_t out_chunk;
+
         int32_t scansperchunk;
         dif(exr_get_scanlines_per_chunk(src_file, part_id, &scansperchunk));
+
         uint8_t *chunk_buf = baseband_bufs[part_id];
         for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
         {
-            dif(exr_read_scanline_chunk_info(src_file, part_id, y, &dec_chunk));
+            dif(exr_read_scanline_chunk_info(src_file, part_id, y, &src_chunk));
+
+            dif(exr_write_scanline_chunk_info(out_file, part_id, y, &out_chunk));
 
             if (first)
             {
-                dif(exr_decoding_initialize(src_file, part_id, &dec_chunk, &decoder));
+                dif(exr_decoding_initialize(src_file, part_id, &src_chunk, &decoder));
+
+                dif(exr_encoding_initialize(out_file, part_id, &out_chunk, &encoder));
             }
             else
             {
-                dif(exr_decoding_update(src_file, part_id, &dec_chunk, &decoder));
+                dif(exr_decoding_update(src_file, part_id, &src_chunk, &decoder));
+
+                dif(exr_encoding_update(out_file, part_id, &out_chunk, &encoder));
             }
 
             for (int ch_id = 0; ch_id < decoder.channel_count; ++ch_id)
             {
-                const exr_coding_channel_info_t &channel = decoder.channels[ch_id];
+                const exr_coding_channel_info_t &dec_ch = decoder.channels[ch_id];
 
-                if (channel.height == 0)
+                if (decoder.channels[ch_id].height == 0)
                 {
                     decoder.channels[ch_id].decode_to_ptr = NULL;
                     decoder.channels[ch_id].user_pixel_stride = 0;
                     decoder.channels[ch_id].user_line_stride = 0;
+
+                    encoder.channels[ch_id].encode_from_ptr = NULL;
+                    encoder.channels[ch_id].user_pixel_stride = 0;
+                    encoder.channels[ch_id].user_line_stride = 0;
                     continue;
                 }
 
                 decoder.channels[ch_id].decode_to_ptr = chunk_buf + ch_offset[ch_id];
                 decoder.channels[ch_id].user_pixel_stride = pixelstride;
                 decoder.channels[ch_id].user_line_stride = linestride;
-            }
-
-            if (first)
-            {
-                dif(
-                    exr_decoding_choose_default_routines(src_file, part_id, &decoder));
-            }
-            dif(exr_decoding_run(src_file, part_id, &decoder));
-
-            first = false;
-            chunk_buf += linestride * scansperchunk;
-        }
-        dif(exr_decoding_destroy(src_file, &decoder));
-
-        /* encode */
-
-        first = true;
-        exr_encode_pipeline_t encoder;
-        exr_chunk_info_t enc_chunk;
-        dif(exr_get_scanlines_per_chunk(enc_file, part_id, &scansperchunk));
-        chunk_buf = baseband_bufs[part_id];
-        for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
-        {
-            dif(exr_write_scanline_chunk_info(enc_file, part_id, y, &enc_chunk));
-
-            if (first)
-            {
-                dif(exr_encoding_initialize(enc_file, part_id, &enc_chunk, &encoder));
-            }
-            else
-            {
-                dif(exr_encoding_update(enc_file, part_id, &enc_chunk, &encoder));
-            }
-
-            for (int ch_id = 0; ch_id < encoder.channel_count; ++ch_id)
-            {
-                const exr_coding_channel_info_t &channel = encoder.channels[ch_id];
-
-                if (channel.height == 0)
-                {
-                    encoder.channels[ch_id].encode_from_ptr = NULL;
-                    encoder.channels[ch_id].user_pixel_stride = 0;
-                    encoder.channels[ch_id].user_line_stride = 0;
-                    continue;
-                }
 
                 encoder.channels[ch_id].encode_from_ptr = chunk_buf + ch_offset[ch_id];
                 encoder.channels[ch_id].user_pixel_stride = pixelstride;
@@ -224,23 +200,30 @@ int main(int argc, char *argv[])
             if (first)
             {
                 dif(
-                    exr_encoding_choose_default_routines(enc_file, part_id, &encoder));
+                    exr_decoding_choose_default_routines(src_file, part_id, &decoder));
+                decoder.decompress_fn = ojphl_decompress;
+                decoder.decoding_user_data = &ud;
+
+                dif(
+                    exr_encoding_choose_default_routines(out_file, part_id, &encoder));
                 encoder.compressed_bytes = scansperchunk * linestride;
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
-                encoder.encoding_user_data = &ud;
-                encoder.compress_fn = ojphl_compress;
             }
-            dif(exr_encoding_run(enc_file, part_id, &encoder));
+            dif(exr_decoding_run(src_file, part_id, &decoder));
+            dif(exr_encoding_run(out_file, part_id, &encoder));
 
             first = false;
             chunk_buf += linestride * scansperchunk;
         }
+        dif(exr_decoding_destroy(src_file, &decoder));
+
         free(encoder.compressed_buffer);
-        dif(exr_encoding_destroy(enc_file, &encoder));
+        encoder.compressed_buffer = NULL;
+        dif(exr_encoding_destroy(out_file, &encoder));
     }
 
     dif(exr_finish(&src_file));
-    dif(exr_finish(&enc_file));
+    dif(exr_finish(&out_file));
 
     /* free baseband buffers */
 

@@ -33,10 +33,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "openexr_decode.h"
 #include "openexr_encode.h"
 
-struct ojphl_user_data
+struct ojphl_encoder_data
 {
   float q_step;
 };
+
+struct ojphl_decoder_data
+{
+  int skip_rez;
+};
+
 
 extern "C" exr_result_t
 ojphl_decompress(exr_decode_pipeline_t *decode);
