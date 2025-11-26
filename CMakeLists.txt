@@ -26,3 +26,14 @@ target_link_libraries(exrj2klossy_dec OpenEXRCore openjph pthread)
 if(WIN32 AND (BUILD_SHARED_LIBS OR OPENEXR_BUILD_BOTH_STATIC_SHARED))
   target_compile_definitions(exrj2klossy_dec PRIVATE OPENEXR_DLL)
 endif()
+
+# mse app
+
+add_executable(exrmse src/main/cpp/exrmse.cpp)
+target_include_directories(exrmse PRIVATE ext/cxxopts)
+target_link_libraries(exrmse OpenEXRCore pthread)
+
+
+if(WIN32 AND (BUILD_SHARED_LIBS OR OPENEXR_BUILD_BOTH_STATIC_SHARED))
+  target_compile_definitions(exrmse PRIVATE OPENEXR_DLL)
+endif()
