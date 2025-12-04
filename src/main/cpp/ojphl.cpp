@@ -18,6 +18,60 @@
 #include "openexr_encode.h"
 #include "internal_ht_common.h"
 #include "ojphl.h"
+#include <internal_coding.h>
+
+static inline int16_t
+htl_convertToNonLinear (uint16_t x)
+{
+    if (x == 0)
+        return 0;
+    if ((x & 0x7c00) == 0x7c00) // infinity/nan?
+        return 0;
+
+    float f = half_to_float(x);
+    int16_t sign = f < 0.0f ? -1 : 1;
+    f = fabsf(f);
+
+    if (f < 0.00006103515625) {
+        return 0;
+    }
+
+    double z;
+    if (f <= 1.0f)
+    {
+        z = powf(f, 1.0f / 2.2f);
+
+    }
+    else
+    {
+        z = logf (f) / 2.2f + 1.0f;
+    }
+    return sign * floor((z - 0.012143799) * 5435.16429285265);
+}
+
+static inline uint16_t
+htl_convertToLinear (int16_t x)
+{
+    if (x == 0)
+        return 0;
+
+    float sign = x < 0 ? -1.0f : 1.0f;
+    double f = abs(x) / 5435.16429285265 + 0.012143799;
+
+    float px, py;
+    if (f <= 1.0)
+    {
+        px = f ;
+        py = 2.2f;
+    }
+    else
+    {
+        px = 9.02501329156f; // = pow(2.7182818, 2.2)
+        py = f - 1.0f;
+    }
+    float z = sign * powf(px, py);
+    return float_to_half(z);
+}
 
 /**
  * OpenJPH output file that is backed by a fixed-size memory buffer
@@ -164,7 +218,8 @@ ht_undo_impl (
     const void*            compressed_data,
     uint64_t               comp_buf_size,
     void*                  uncompressed_data,
-    uint64_t               uncompressed_size)
+    uint64_t               uncompressed_size,
+    bool                   custom_nlt = true)
 {
     exr_result_t rv = EXR_ERR_SUCCESS;
 
@@ -266,7 +321,8 @@ ht_undo_impl (
                                  p < decode->channels[file_c].width;
                                  p++)
                             {
-                                *channel_pixels++ = cur_line->i32[p];
+                                *channel_pixels++ = custom_nlt ? htl_convertToLinear((int16_t)cur_line->i32[p]) :
+                                                                (int16_t)cur_line->i32[p];
                             }
                         }
                         else
@@ -307,7 +363,8 @@ ht_undo_impl (
                     for (int16_t p = 0; p < decode->channels[file_c].width;
                          p++)
                     {
-                        *channel_pixels++ = cur_line->i32[p];
+                        *channel_pixels++ = custom_nlt ? htl_convertToLinear((int16_t)cur_line->i32[p]) :
+                                                         (int16_t)cur_line->i32[p];
                     }
                 }
                 else
@@ -361,7 +418,7 @@ ojphl_decompress(
 
 
 static exr_result_t
-ht_apply_impl (exr_encode_pipeline_t* encode)
+ht_apply_impl (exr_encode_pipeline_t* encode, bool custom_nlt = true)
 {
     exr_result_t rv = EXR_ERR_SUCCESS;
 
@@ -388,7 +445,7 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
     for (int16_t c = 0; c < encode->channel_count; c++)
     {
         int file_c = cs_to_file_ch[c].file_index;
-        if (encode->channels[file_c].data_type != EXR_PIXEL_UINT)
+        if (!custom_nlt && encode->channels[file_c].data_type != EXR_PIXEL_UINT)
             nlt.set_nonlinear_transform (
                 c,
                 ojph::param_nlt::nonlinearity::OJPH_NLT_BINARY_COMPLEMENT_NLT);
@@ -473,7 +530,11 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
                                      p < encode->channels[file_c].width;
                                     p++)
                                 {
-                                    cur_line->i32[p] = *channel_pixels++;
+                                    int16_t pixel = *channel_pixels++;
+                                    if (custom_nlt) {
+                                        pixel = htl_convertToNonLinear(pixel);
+                                    }
+                                    cur_line->i32[p] = pixel;
                                 }
                             }
                             else
@@ -517,7 +578,11 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
                         for (int32_t p = 0; p < encode->channels[file_c].width;
                             p++)
                         {
-                            cur_line->i32[p] = *channel_pixels++;
+                            int16_t pixel = *channel_pixels++;
+                            if (custom_nlt) {
+                                pixel = htl_convertToNonLinear(pixel);
+                            }
+                            cur_line->i32[p] = pixel;
                         }
                     }
                     else

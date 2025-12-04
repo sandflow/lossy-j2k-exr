@@ -4,20 +4,6 @@ set -e
 
 FN="SPARKS_ACES_07500.exr"
 
-# generate DWA results
-DWA_Q="10 20 30 40 50 60 70 80 90 100"
-
-echo "DWA"
-echo "Q, MSE, SIZE"
-
-for q in $DWA_Q; do
-  DWA_FN="${FN%.exr}.dwa.${q}.exr"
-  ./bin/exrmetrics ${FN} -z dwab --convert -o ${DWA_FN} -l ${q}
-  SIZE=$(stat -c%s -- "$DWA_FN")
-  MSE=$(./bin/exrmse ${FN} ${DWA_FN})
-  echo "${q},${MSE},${SIZE}"
-done
-
 # generate HTL results
 
 HT_Q="0.00005 0.0001 0.0002 0.0003 0.0004 0.0005 0.0006 0.0007 0.0008 0.0009 0.001"
