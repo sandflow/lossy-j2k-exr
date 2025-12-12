@@ -204,11 +204,11 @@ int main(int argc, char *argv[])
     {
         half a_bits;
         a_bits.setBits (*(uint16_t*)(a_buf + i * 2));
-        double a_pix = asinh(static_cast<double>(a_bits)/6.10e-5);
+        double a_pix = asinh(static_cast<double>(a_bits)/6.10e-10);
 
         half b_bits;
         b_bits.setBits (*(uint16_t*)(b_buf + i * 2));
-        double b_pix = asinh(static_cast<double>(b_bits)/6.10e-5);
+        double b_pix = asinh(static_cast<double>(b_bits)/6.10e-10);
 
         mse += (a_pix - b_pix) * (a_pix - b_pix);
     }
