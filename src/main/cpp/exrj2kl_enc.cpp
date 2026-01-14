@@ -8,6 +8,7 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "kdu.h"
 
 #include "cxxopts.hpp"
 
@@ -31,7 +32,8 @@ int main(int argc, char *argv[])
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "epath", "Encoded image path", cxxopts::value<std::string>())(
-        "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"));
+        "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"))(
+        "s", "Compressed size", cxxopts::value<long>()->default_value("-1"));
 
     options.parse_positional({"ipath", "epath"});
 
@@ -50,9 +52,11 @@ int main(int argc, char *argv[])
 
     exr_result_t r;
 
-    ojphl_encoder_data ud;
+    ojphl_encoder_data ojph_data;
+    ojph_data.q_step = args["q"].as<float>();
 
-    ud.q_step = args["q"].as<float>();
+    kdu_encoder_data kdu_data;
+    kdu_data.size = args["s"].as<long>();
 
     /* source file */
 
@@ -227,8 +231,13 @@ int main(int argc, char *argv[])
                     exr_encoding_choose_default_routines(enc_file, part_id, &encoder));
                 encoder.compressed_bytes = scansperchunk * linestride;
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
-                encoder.encoding_user_data = &ud;
-                encoder.compress_fn = ojphl_compress;
+                if (kdu_data.size > 0) {
+                    encoder.encoding_user_data = &kdu_data;
+                    encoder.compress_fn = kdu_compress;
+                } else {
+                    encoder.encoding_user_data = &ojph_data;
+                    encoder.compress_fn = ojphl_compress;
+                }
             }
             dif(exr_encoding_run(enc_file, part_id, &encoder));
 
