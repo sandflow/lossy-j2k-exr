@@ -26,7 +26,7 @@ void dif(exr_result_t r)
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
-        "ojphl_enc", "J2K lossy EXR decoder");
+        "exrj2kl_dec", "J2K lossy EXR decoder");
 
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
