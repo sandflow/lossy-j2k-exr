@@ -216,8 +216,6 @@ kdu_compress(exr_encode_pipeline_t *encode)
      if (!encode->encoding_user_data)
         return EXR_ERR_INVALID_ARGUMENT;
 
-    kdu_long cs_size = static_cast<kdu_encoder_data*>(encode->encoding_user_data)->size;
-
     std::vector<CodestreamChannelInfo> cs_to_file_ch(encode->channel_count);
     bool isRGB = make_channel_map(
         encode->channel_count, encode->channels, cs_to_file_ch);
@@ -225,6 +223,8 @@ kdu_compress(exr_encode_pipeline_t *encode)
     int height = encode->chunk.height;
     int width = encode->chunk.width;
 
+    kdu_long cs_size = encode->packed_bytes / static_cast<kdu_encoder_data *>(encode->encoding_user_data)->ratio;
+    
     std::vector<int> heights(encode->channel_count);
     std::fill(heights.begin(), heights.end(), height);
 
@@ -278,7 +278,7 @@ kdu_compress(exr_encode_pipeline_t *encode)
         codestream.access_siz()->finalize_all();
 
         kdu_stripe_compressor compressor;
-        compressor.start(codestream, cs_size > 0 ? 1 : 0, &cs_size);
+        compressor.start(codestream, 1, &cs_size);
 
         if (encode->channels[0].data_type == EXR_PIXEL_HALF)
         {

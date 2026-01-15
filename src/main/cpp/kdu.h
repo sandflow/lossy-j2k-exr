@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct kdu_encoder_data
 {
-  long size;
+  float ratio;
 };
 
 extern "C" exr_result_t

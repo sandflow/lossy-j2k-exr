@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "epath", "Encoded image path", cxxopts::value<std::string>())(
         "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"))(
-        "s", "Compressed size", cxxopts::value<long>()->default_value("-1"));
+        "r", "Compression ratio", cxxopts::value<float>()->default_value("-1.0"));
 
     options.parse_positional({"ipath", "epath"});
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     ojph_data.q_step = args["q"].as<float>();
 
     kdu_encoder_data kdu_data;
-    kdu_data.size = args["s"].as<long>();
+    kdu_data.ratio = args["r"].as<float>();
 
     /* source file */
 
@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
                     exr_encoding_choose_default_routines(enc_file, part_id, &encoder));
                 encoder.compressed_bytes = scansperchunk * linestride;
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
-                if (kdu_data.size > 0) {
+                if (kdu_data.ratio > 1.0f) {
                     encoder.encoding_user_data = &kdu_data;
                     encoder.compress_fn = kdu_compress;
                 } else {
