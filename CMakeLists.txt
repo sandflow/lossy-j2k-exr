@@ -13,7 +13,7 @@ find_path(KDU_INCLUDE_DIR kdu_args.h PATH_SUFFIXES kakadu kdu)
 find_library(KDU_LIBRARY NAMES kdu_v86R PATH_SUFFIXES kakadu kdu)
 find_library(KDU_AUX_LIBRARY NAMES kdu_a86R PATH_SUFFIXES kakadu kdu)
 if(NOT(KDU_INCLUDE_DIR) OR NOT(KDU_LIBRARY) OR NOT(KDU_AUX_LIBRARY))
-  message(FATAL_ERROR "Kakadu not found. Please set KDU_INCLUDE_DIR and KDU_LIBRARY.")
+  message(FATAL_ERROR "Kakadu not found.")
 endif()
 
 # add OJPH include
