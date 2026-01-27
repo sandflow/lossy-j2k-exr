@@ -223,8 +223,8 @@ kdu_compress(exr_encode_pipeline_t *encode)
     int height = encode->chunk.height;
     int width = encode->chunk.width;
 
-    kdu_long cs_size = encode->packed_bytes / static_cast<kdu_encoder_data *>(encode->encoding_user_data)->ratio;
-    
+    kdu_long cs_size = ((float) encode->packed_bytes) / static_cast<kdu_encoder_data *>(encode->encoding_user_data)->ratio;
+
     std::vector<int> heights(encode->channel_count);
     std::fill(heights.begin(), heights.end(), height);
 
