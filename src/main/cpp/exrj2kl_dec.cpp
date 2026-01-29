@@ -8,6 +8,7 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "kdu.h"
 
 #include "cxxopts.hpp"
 
@@ -53,6 +54,8 @@ int main(int argc, char *argv[])
     ojphl_decoder_data ud;
 
     ud.skip_rez = args["s"].as<int>();
+
+    bool use_kdu = true;
 
     /* source file */
 
@@ -201,7 +204,7 @@ int main(int argc, char *argv[])
             {
                 dif(
                     exr_decoding_choose_default_routines(src_file, part_id, &decoder));
-                decoder.decompress_fn = ojphl_decompress;
+                decoder.decompress_fn =  use_kdu ? kdu_decompress : ojphl_decompress;
                 decoder.decoding_user_data = &ud;
 
                 dif(
