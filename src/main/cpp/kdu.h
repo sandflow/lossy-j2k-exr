@@ -36,6 +36,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 struct kdu_encoder_data
 {
   float ratio;
+  bool use_nlt;
+};
+
+struct kdu_decoder_data
+{
+  bool use_nlt;
 };
 
 extern "C" exr_result_t

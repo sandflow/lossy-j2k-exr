@@ -11,6 +11,7 @@
 #include "kdu.h"
 
 #include "cxxopts.hpp"
+#include <half.h>
 
 #define MAX_CHANNEL_COUNT 32
 #define MAX_PART_COUNT 128
@@ -24,6 +25,26 @@ void dif(exr_result_t r)
     }
 }
 
+static void apply_transform(uint8_t *buffer, size_t num_bytes, exr_pixel_type_t type)
+{
+    if (type == EXR_PIXEL_HALF)
+    {
+        uint16_t *buf = (uint16_t *)buffer;
+        size_t count = num_bytes / sizeof(uint16_t);
+        for (size_t i = 0; i < count; ++i)
+        {
+        }
+    }
+    else
+    {
+        uint32_t *buf = (uint32_t *)buffer;
+        size_t count = num_bytes / sizeof(uint32_t);
+        for (size_t i = 0; i < count; ++i)
+        {
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
@@ -33,7 +54,8 @@ int main(int argc, char *argv[])
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "epath", "Encoded image path", cxxopts::value<std::string>())(
         "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"))(
-        "r", "Compression ratio", cxxopts::value<float>()->default_value("-1.0"));
+        "r", "Compression ratio", cxxopts::value<float>()->default_value("-1.0"))(
+        "t", "Bespoke NLT");
 
     options.parse_positional({"ipath", "epath"});
 
@@ -50,13 +72,17 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &enc_fn = args["epath"].as<std::string>();
 
+    bool custom_nlt = args.count("t");
+
     exr_result_t r;
 
     ojphl_encoder_data ojph_data;
     ojph_data.q_step = args["q"].as<float>();
+    ojph_data.use_nlt = !custom_nlt;
 
     kdu_encoder_data kdu_data;
     kdu_data.ratio = args["r"].as<float>();
+    kdu_data.use_nlt = !custom_nlt;
 
     /* source file */
 
@@ -195,6 +221,28 @@ int main(int argc, char *argv[])
         exr_chunk_info_t enc_chunk;
         dif(exr_get_scanlines_per_chunk(enc_file, part_id, &scansperchunk));
         chunk_buf = baseband_bufs[part_id];
+
+        if (custom_nlt) {
+
+            half *half_buf = (half *)chunk_buf;
+            for (size_t i = 0; i < height * width * channels->num_channels; i++)
+            {
+                float val = (float) half_buf[i];
+                float sign = val < 0.0f ? -1.0f : 1.0f;
+                val = fabsf(val);
+                if (val <= 1.0f)
+                {
+                    val = powf(val, 1.0f / 2.2f);
+                }
+                else
+                {
+                    val = logf(val) / logf(expf(2.2f)) + 1.0f;
+                }
+                half_buf[i].setBits();
+            }
+            
+        }
+
         for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
         {
             dif(exr_write_scanline_chunk_info(enc_file, part_id, y, &enc_chunk));

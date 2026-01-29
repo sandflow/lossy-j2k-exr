@@ -36,11 +36,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 struct ojphl_encoder_data
 {
   float q_step;
+  bool use_nlt;
 };
 
 struct ojphl_decoder_data
 {
   int skip_rez;
+  bool use_nlt;
 };
 
 
