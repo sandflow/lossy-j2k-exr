@@ -12,36 +12,18 @@
 
 #include "cxxopts.hpp"
 #include <half.h>
+#include <assert.h>
+#include "nlt.h"
 
 #define MAX_CHANNEL_COUNT 32
 #define MAX_PART_COUNT 128
 
-void dif(exr_result_t r)
+static void dif(exr_result_t r)
 {
     if (r != EXR_ERR_SUCCESS)
     {
         printf("fail");
         exit(-1);
-    }
-}
-
-static void apply_transform(uint8_t *buffer, size_t num_bytes, exr_pixel_type_t type)
-{
-    if (type == EXR_PIXEL_HALF)
-    {
-        uint16_t *buf = (uint16_t *)buffer;
-        size_t count = num_bytes / sizeof(uint16_t);
-        for (size_t i = 0; i < count; ++i)
-        {
-        }
-    }
-    else
-    {
-        uint32_t *buf = (uint32_t *)buffer;
-        size_t count = num_bytes / sizeof(uint32_t);
-        for (size_t i = 0; i < count; ++i)
-        {
-        }
     }
 }
 
@@ -225,20 +207,10 @@ int main(int argc, char *argv[])
         if (custom_nlt) {
 
             half *half_buf = (half *)chunk_buf;
+            int16_t *int16_buf = (int16_t *)chunk_buf;
             for (size_t i = 0; i < height * width * channels->num_channels; i++)
             {
-                float val = (float) half_buf[i];
-                float sign = val < 0.0f ? -1.0f : 1.0f;
-                val = fabsf(val);
-                if (val <= 1.0f)
-                {
-                    val = powf(val, 1.0f / 2.2f);
-                }
-                else
-                {
-                    val = logf(val) / logf(expf(2.2f)) + 1.0f;
-                }
-                half_buf[i].setBits();
+                int16_buf[i] = half_to_int16(half_buf[i]);
             }
             
         }

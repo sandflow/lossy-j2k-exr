@@ -11,11 +11,13 @@
 #include "kdu.h"
 
 #include "cxxopts.hpp"
+#include <half.h>
+#include "nlt.h"
 
 #define MAX_CHANNEL_COUNT 32
 #define MAX_PART_COUNT 128
 
-void dif(exr_result_t r)
+static void dif(exr_result_t r)
 {
     if (r != EXR_ERR_SUCCESS)
     {

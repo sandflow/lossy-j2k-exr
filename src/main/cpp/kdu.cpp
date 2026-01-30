@@ -213,8 +213,10 @@ kdu_compress(exr_encode_pipeline_t *encode)
 {
     exr_result_t rv = EXR_ERR_SUCCESS;
 
-     if (!encode->encoding_user_data)
+    if (!encode->encoding_user_data)
         return EXR_ERR_INVALID_ARGUMENT;
+
+    kdu_encoder_data* ud = static_cast<kdu_encoder_data *>(encode->encoding_user_data);
 
     std::vector<CodestreamChannelInfo> cs_to_file_ch(encode->channel_count);
     bool isRGB = make_channel_map(
@@ -223,7 +225,7 @@ kdu_compress(exr_encode_pipeline_t *encode)
     int height = encode->chunk.height;
     int width = encode->chunk.width;
 
-    kdu_long cs_size = ((float) encode->packed_bytes) / static_cast<kdu_encoder_data *>(encode->encoding_user_data)->ratio;
+    kdu_long cs_size = ((float) encode->packed_bytes) / ud->ratio;
 
     std::vector<int> heights(encode->channel_count);
     std::fill(heights.begin(), heights.end(), height);
@@ -269,7 +271,7 @@ kdu_compress(exr_encode_pipeline_t *encode)
         cod->set(Clevels, 0, 0, 5);
         cod->set(Cycc, 0, 0, isRGB);
 
-        if (encode->channels[0].data_type != EXR_PIXEL_UINT)
+        if (encode->channels[0].data_type != EXR_PIXEL_UINT && ud->use_nlt)
         {
             kdu_params *nlt = codestream.access_siz()->access_cluster(NLT_params);
             nlt->set(NLType, 0, 0, NLType_SMAG);

@@ -50,3 +50,9 @@ target_link_libraries(exrmse OpenEXRCore pthread)
 if(WIN32 AND (BUILD_SHARED_LIBS OR OPENEXR_BUILD_BOTH_STATIC_SHARED))
   target_compile_definitions(exrmse PRIVATE OPENEXR_DLL)
 endif()
+
+# test app
+
+add_executable(nlt_test src/main/cpp/nlt_test.cpp)
+target_link_libraries(nlt_test OpenEXRCore pthread)
+
