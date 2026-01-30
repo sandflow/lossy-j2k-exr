@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "dpath", "Decoded image path", cxxopts::value<std::string>())(
-        "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"));
+        "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"))(
+        "t", "Bespoke NLT");
 
     options.parse_positional({"ipath", "dpath"});
 
@@ -51,11 +52,16 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &out_fn = args["dpath"].as<std::string>();
 
+    bool custom_nlt = args.count("t");
+
     exr_result_t r;
 
     ojphl_decoder_data ud;
-
     ud.skip_rez = args["s"].as<int>();
+    ud.use_nlt = !custom_nlt;
+
+    kdu_decoder_data kdu_data;
+    kdu_data.use_nlt = !custom_nlt;
 
     bool use_kdu = true;
 
@@ -215,6 +221,16 @@ int main(int argc, char *argv[])
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
             }
             dif(exr_decoding_run(src_file, part_id, &decoder));
+
+            if (custom_nlt) {
+                half *half_buf = (half *)chunk_buf;
+                int16_t *int16_buf = (int16_t *)chunk_buf;
+                for (size_t i = 0; i < scansperchunk * width * channels->num_channels; i++)
+                {
+                    half_buf[i] = int16_to_half(int16_buf[i]);
+                }
+            }
+
             dif(exr_encoding_run(out_file, part_id, &encoder));
 
             first = false;
