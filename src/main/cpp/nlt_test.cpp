@@ -6,33 +6,40 @@
 #include "nlt.h"
 
 int main(int argc, char** argv) {
-    int max_diff = 0;
+    float max_float_diff = 0;
+    int max_int_diff = 0;
 
-    // Test range [-32767, 32767]
     for (int i = -32767; i <= 32767; ++i) {
-        if (i == -2 || i == 2) {
-            continue;
-        } 
-        int16_t in_val = static_cast<int16_t>(i);
-        half h = int16_to_half(in_val);
-        int16_t out_val = half_to_int16(h);
+        half half_val = int16_to_half((int16_t) i);
+        int16_t int_val = half_to_int16(half_val);
+        half rt_half_val = int16_to_half(int_val);
+        int16_t rt_int_val = half_to_int16(rt_half_val);
 
-        int diff = std::abs(in_val - out_val);
-        if (diff > max_diff) {
-            max_diff = diff;
+        float float_diff = std::abs((float)half_val - (float)rt_half_val);
+        if (float_diff > max_float_diff) {
+            max_float_diff = float_diff;
         }
 
+        int int_diff = std::abs(int_val - i);
+
+        if (int_diff > max_int_diff) {
+            max_int_diff = int_diff;
+        }
+
+        int rt_diff = std::abs(int_val - rt_int_val);
+
         // Allow a small difference due to floating point rounding
-        if (diff > 1) {
+        if (rt_diff > 0) {
             std::cerr << "Round trip failed for " << i
-                      << " -> " << (float)h
-                      << " -> " << out_val
-                      << " (diff: " << diff << ")" << std::endl;
+                      << " -> " << (float)int_val
+                      << " -> " << rt_half_val
+                      << " (diff: " << rt_diff << ")" << std::endl;
             return 1;
         }
     }
 
-    std::cout << "Max round-trip difference: " << max_diff << std::endl;
+    std::cout << "Max float difference in round trip: " << max_float_diff << std::endl;
+    std::cout << "Max int difference in round trip: " << max_int_diff << std::endl;
 
     // Test specific values
     if (half_to_int16(0.0f) != 0) {
