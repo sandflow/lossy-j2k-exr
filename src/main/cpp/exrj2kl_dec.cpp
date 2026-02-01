@@ -222,10 +222,10 @@ int main(int argc, char *argv[])
             }
             dif(exr_decoding_run(src_file, part_id, &decoder));
 
-            if (custom_nlt) {
+            if (custom_nlt && chunk_buf) {
                 half *half_buf = (half *)chunk_buf;
                 int16_t *int16_buf = (int16_t *)chunk_buf;
-                for (size_t i = 0; i < scansperchunk * width * channels->num_channels; i++)
+                for (size_t i = 0; i < decoder.channels[0].height * width * channels->num_channels; i++)
                 {
                     half_buf[i] = int16_to_half(int16_buf[i]);
                 }
