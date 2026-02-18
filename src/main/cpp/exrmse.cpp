@@ -8,6 +8,7 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "nlt.h"
 
 #include "cxxopts.hpp"
 #include <float.h>
@@ -146,7 +147,8 @@ int main(int argc, char *argv[])
 
     options.add_options()(
         "apath", "Image A path", cxxopts::value<std::string>())(
-        "bpath", "Image B path", cxxopts::value<std::string>());
+        "bpath", "Image B path", cxxopts::value<std::string>())(
+        "n", "NLT MSE");
 
     options.parse_positional({"apath", "bpath"});
 
@@ -159,6 +161,8 @@ int main(int argc, char *argv[])
         std::cout << options.help() << std::endl;
         exit(-1);
     }
+
+    bool nlt_mse = args.count("n") == 1;
 
     exr_result_t r;
 
@@ -198,17 +202,17 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    double mse = 0.0;
+    float mse = 0.0;
 
     for (size_t i = 0; i < a_width * a_height; i++)
     {
         half a_bits;
         a_bits.setBits (*(uint16_t*)(a_buf + i * 2));
-        double a_pix = asinh(static_cast<double>(a_bits)/6.10e-10);
+        float a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
 
         half b_bits;
         b_bits.setBits (*(uint16_t*)(b_buf + i * 2));
-        double b_pix = asinh(static_cast<double>(b_bits)/6.10e-10);
+        float b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
 
         mse += (a_pix - b_pix) * (a_pix - b_pix);
     }

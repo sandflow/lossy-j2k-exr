@@ -2,20 +2,31 @@
 
 set -e
 
-SRC="${1:-SPARKS_ACES_07500.exr}"
+SRC="${1:-build/SPARKS_ACES_07500.exr}"
 FN=$(basename "${SRC}")
+ORIG_SIZE=$(stat -c%s -- "$SRC")
 
 # generate DWA results
 DWA_Q="45"
 DWA_FN="${FN%.exr}.dwa.${q}.exr"
 ./bin/exrmetrics ${SRC} -z dwab --convert -o ${DWA_FN} -l ${DWA_Q}
 DWA_SIZE=$(stat -c%s -- "$DWA_FN")
-DWA_MSE=$(./bin/exrmse ${SRC} ${DWA_FN})
+DWA_MSE=$(./bin/exrmse ${SRC} ${DWA_FN} -n)
 
 echo "DWA"
 echo "${DWA_Q},${DWA_MSE},${DWA_SIZE}"
 
-# generate HTL results
+# generate KDU results
+
+C_RATIO=$(echo "scale=6; $DWA_SIZE / $ORIG_SIZE" | bc)
+KDU_FN="${FN%.exr}.kdu.${q}.exr"
+./bin/exrj2klossy_enc ${SRC} ${KDU_FN} -r ${C_RATIO} -t > /dev/null
+KDU_SIZE=$(stat -c%s -- "$KDU_FN")
+KDU_MSE=$(./bin/exrmse ${SRC} ${HT_FN})
+
+exit(0)
+
+# generate OpenJPH results
 
 TOLERANCE="0.01"
 MIN="0.00001"
