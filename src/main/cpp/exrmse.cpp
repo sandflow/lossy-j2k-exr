@@ -208,10 +208,16 @@ int main(int argc, char *argv[])
     {
         half a_bits;
         a_bits.setBits (*(uint16_t*)(a_buf + i * 2));
-        float a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
 
         half b_bits;
         b_bits.setBits (*(uint16_t*)(b_buf + i * 2));
+
+        if (a_bits.isNan() || b_bits.isNan() || a_bits.isInfinity() || b_bits.isInfinity())
+        {
+            continue;
+        }
+
+        float a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
         float b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
 
         mse += (a_pix - b_pix) * (a_pix - b_pix);
