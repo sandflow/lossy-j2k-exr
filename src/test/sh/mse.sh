@@ -20,7 +20,7 @@ run_dwa() {
     echo "${q},${MSE},${SIZE}"
   done
 }
-#run_dwa
+run_dwa
 
 run_ojph() {
   # generate ojph results
@@ -44,7 +44,7 @@ run_ojph() {
     echo "${q},${MSE},${SIZE}"
   done
 }
-#run_ojph
+run_ojph
 
 run_kdu() {
   # generate KDU results
