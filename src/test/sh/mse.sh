@@ -10,15 +10,15 @@ run_dwa() {
   DWA_Q="20 40 60 80 100 160"
 
   echo "DWA"
-  echo "Q, MSE, MSE (linear), SIZE"
+  echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $DWA_Q; do
     DWA_FN="${FN%.exr}.dwa.${q}.exr"
     ./bin/exrmetrics ${SRC} -z dwab --convert -o ${DWA_FN} -l ${q}
     SIZE=$(stat -c%s -- "$DWA_FN")
     MSE=$(./bin/exrmse -n ${SRC} ${DWA_FN})
-    MSELIN=$(./bin/exrmse ${SRC} ${DWA_FN})
-    echo "${q},${MSE},${MSELIN},${SIZE}"
+    MSEA=$(./bin/exrmse -a ${SRC} ${DWA_FN})
+    echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
 run_dwa
@@ -29,7 +29,7 @@ run_ojph() {
   HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
 
   echo "OJPH"
-  echo "Q, MSE, SIZE"
+  echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $HT_Q; do
     HT_FN="${FN%.exr}.ht.${q}.exr"
@@ -40,9 +40,10 @@ run_ojph() {
     ./bin/exrj2klossy_dec -t ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
     MSE=$(./bin/exrmse -n  ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
-    echo "${q},${MSE},${SIZE}"
+    echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
 run_ojph
@@ -53,7 +54,7 @@ run_ojph_linear() {
   HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
 
   echo "OJPH (linear)"
-  echo "Q, MSE, SIZE"
+  echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $HT_Q; do
     HT_FN="${FN%.exr}.ht.${q}.exr"
@@ -63,10 +64,11 @@ run_ojph_linear() {
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
-    MSE=$(./bin/exrmse ${SRC} ${PIZ_FN})
+    MSE=$(./bin/exrmse -n ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
-    echo "${q},${MSE},${SIZE}"
+    echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
 run_ojph_linear
@@ -77,7 +79,7 @@ run_kdu() {
   HT_R="6 8 10 14 20"
 
   echo "KDU"
-  echo "R, MSE, SIZE"
+  echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for r in $HT_R; do
     HT_FN="${FN%.exr}.kdu.${r}.exr"
@@ -88,9 +90,10 @@ run_kdu() {
     ./bin/exrj2klossy_dec -t ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
     MSE=$(./bin/exrmse -n  ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
-    echo "${r},${MSE},${SIZE}"
+    echo "${r},${MSE},${MSEA},${SIZE}"
   done
 }
 run_kdu
@@ -101,7 +104,7 @@ run_kdu_linear() {
   HT_R="6 8 10 14 20"
 
   echo "KDU linear"
-  echo "R, MSE, SIZE"
+  echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for r in $HT_R; do
     HT_FN="${FN%.exr}.kdu.${r}.exr"
@@ -111,10 +114,11 @@ run_kdu_linear() {
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
-    MSE=$(./bin/exrmse ${SRC} ${PIZ_FN})
+    MSE=$(./bin/exrmse -n ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
-    echo "${r},${MSE},${SIZE}"
+    echo "${r},${MSE},${MSEA},${SIZE}"
   done
 }
 run_kdu_linear

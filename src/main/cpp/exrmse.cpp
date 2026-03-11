@@ -148,7 +148,8 @@ int main(int argc, char *argv[])
     options.add_options()(
         "apath", "Image A path", cxxopts::value<std::string>())(
         "bpath", "Image B path", cxxopts::value<std::string>())(
-        "n", "NLT MSE");
+        "n", "NLT MSE")(
+        "a", "arcsinh MSE");
 
     options.parse_positional({"apath", "bpath"});
 
@@ -163,6 +164,7 @@ int main(int argc, char *argv[])
     }
 
     bool nlt_mse = args.count("n") == 1;
+    bool arcsinh_mse = args.count("a") == 1;
 
     exr_result_t r;
 
@@ -219,6 +221,11 @@ int main(int argc, char *argv[])
 
         float a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
         float b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
+
+        if (arcsinh_mse) {
+            a_pix = std::asinh(a_pix/0.00001);
+            b_pix = std::asinh(b_pix/0.00001);
+        }
 
         mse += (a_pix - b_pix) * (a_pix - b_pix);
     }
