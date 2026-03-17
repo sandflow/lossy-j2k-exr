@@ -23,7 +23,7 @@ run_dwa() {
 }
 run_dwa
 
-run_ojph() {
+run_ojph_dwa() {
   # generate ojph results
 
   HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
@@ -46,9 +46,9 @@ run_ojph() {
     echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
-run_ojph
+run_ojph_dwa
 
-run_ojph_linear() {
+run_ojph_nlt() {
   # generate ojph results
 
   HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
@@ -71,9 +71,9 @@ run_ojph_linear() {
     echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
-run_ojph_linear
+run_ojph_nlt
 
-run_kdu() {
+run_kdu_dwa() {
   # generate KDU results
 
   HT_R="6 8 10 14 20"
@@ -96,9 +96,9 @@ run_kdu() {
     echo "${r},${MSE},${MSEA},${SIZE}"
   done
 }
-run_kdu
+#run_kdu_dwa
 
-run_kdu_linear() {
+run_kdu_nlt() {
   # generate KDU results
 
   HT_R="6 8 10 14 20"
@@ -121,7 +121,7 @@ run_kdu_linear() {
     echo "${r},${MSE},${MSEA},${SIZE}"
   done
 }
-run_kdu_linear
+#run_kdu_nlt
 
 # ./bin/exrmetrics SPARKS_ACES_01000.exr -z dwab --convert -o SPARKS_ACES_01000.dwaa.exr
 # ./bin/exrmse SPARKS_ACES_01000.exr SPARKS_ACES_01000.htl.exr

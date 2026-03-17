@@ -273,9 +273,13 @@ kdu_compress(exr_encode_pipeline_t *encode)
 
         if (encode->channels[0].data_type != EXR_PIXEL_UINT && ud->use_nlt)
         {
+            //std::cout << "Using NLT" << std::endl;
             kdu_params *nlt = codestream.access_siz()->access_cluster(NLT_params);
             nlt->set(NLType, 0, 0, NLType_SMAG);
         }
+
+        //kdu_params *enc = codestream.access_siz()->access_cluster(ENC_params);
+        //enc->set(Qstep, 0, 0, 0.000001);
 
         codestream.access_siz()->finalize_all();
 

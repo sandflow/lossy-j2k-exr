@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    float mse = 0.0;
+    double mse = 0.0;
 
     for (size_t i = 0; i < a_width * a_height; i++)
     {
@@ -219,12 +219,12 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        float a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
-        float b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
+        double a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
+        double b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
 
         if (arcsinh_mse) {
-            a_pix = std::asinh(a_pix/0.00001);
-            b_pix = std::asinh(b_pix/0.00001);
+            a_pix = std::asinh(a_pix/0.0000001);
+            b_pix = std::asinh(b_pix/0.0000001);
         }
 
         mse += (a_pix - b_pix) * (a_pix - b_pix);

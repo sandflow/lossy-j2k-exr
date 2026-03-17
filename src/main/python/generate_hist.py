@@ -46,9 +46,8 @@ def generate_exr_histogram(input_path, output_path):
     # Visual aids for HDR analysis
     plt.axvline(x=1.0, color='black', linestyle='--', alpha=0.3, label='SDR White (1.0)')
     
-    # Log-Log scale is the gold standard for linear light data
+    # Log scale for x-axis is the gold standard for linear light data
     plt.xscale('log')
-    plt.yscale('log')
     
     plt.title(f"HDR RGB Distribution: {os.path.basename(input_path)}")
     plt.xlabel("Linear Intensity (Stops/Values)")

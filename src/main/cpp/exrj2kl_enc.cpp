@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         "epath", "Encoded image path", cxxopts::value<std::string>())(
         "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"))(
         "r", "Compression ratio", cxxopts::value<float>()->default_value("-1.0"))(
-        "t", "Bespoke NLT");
+        "t", "DWA NLT");
 
     options.parse_positional({"ipath", "epath"});
 
@@ -54,17 +54,17 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &enc_fn = args["epath"].as<std::string>();
 
-    bool custom_nlt = args.count("t");
+    bool dwa_nlt = args.count("t");
 
     exr_result_t r;
 
     ojphl_encoder_data ojph_data;
     ojph_data.q_step = args["q"].as<float>();
-    ojph_data.use_nlt = !custom_nlt;
+    ojph_data.use_nlt = !dwa_nlt;
 
     kdu_encoder_data kdu_data;
     kdu_data.ratio = args["r"].as<float>();
-    kdu_data.use_nlt = !custom_nlt;
+    kdu_data.use_nlt = !dwa_nlt;
 
     /* source file */
 
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
         dif(exr_get_scanlines_per_chunk(enc_file, part_id, &scansperchunk));
         chunk_buf = baseband_bufs[part_id];
 
-        if (custom_nlt) {
+        if (dwa_nlt) {
 
             half *half_buf = (half *)chunk_buf;
             int16_t *int16_buf = (int16_t *)chunk_buf;
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
             {
                 int16_buf[i] = half_to_int16(half_buf[i]);
             }
-            
+
         }
 
         for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
