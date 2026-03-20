@@ -205,8 +205,8 @@ int main(int argc, char *argv[])
     }
 
     double mse = 0.0;
-
-    for (size_t i = 0; i < a_width * a_height; i++)
+    int count = 0;
+    for (size_t i = 0; i < a_width * a_height * 3; i++)
     {
         half a_bits;
         a_bits.setBits (*(uint16_t*)(a_buf + i * 2));
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
         half b_bits;
         b_bits.setBits (*(uint16_t*)(b_buf + i * 2));
 
-        if (a_bits.isNan() || b_bits.isNan() || a_bits.isInfinity() || b_bits.isInfinity())
+        if (!a_bits.isFinite() || !b_bits.isFinite())
         {
             continue;
         }
@@ -223,14 +223,15 @@ int main(int argc, char *argv[])
         double b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
 
         if (arcsinh_mse) {
-            a_pix = std::asinh(a_pix/0.0000001);
-            b_pix = std::asinh(b_pix/0.0000001);
+            a_pix = std::asinh(a_pix/0.0001);
+            b_pix = std::asinh(b_pix/0.0001);
         }
 
-        mse += (a_pix - b_pix) * (a_pix - b_pix);
+        mse += ((a_pix - b_pix) * (a_pix - b_pix));
+        count++;
     }
 
-    mse /= (a_width * a_height);
+    mse /= count;
 
     std::cout << mse << std::endl;
 

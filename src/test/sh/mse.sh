@@ -33,8 +33,8 @@ run_ojph_dwa() {
 
   for q in $HT_Q; do
     HT_FN="${FN%.exr}.ht.${q}.exr"
-    PIZ_FN="${FN%.exr}.ht.${q}.piz.exr"
-    HTL_FN="${FN%.exr}.ht.${q}.htl.exr"
+    PIZ_FN="${FN%.exr}.ojph.dwa.${q}.piz.exr"
+    HTL_FN="${FN%.exr}.ojph.dwa.${q}.htl.exr"
     ./bin/exrj2klossy_enc ${SRC} ${HT_FN} -q ${q} -t > /dev/null
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec -t ${HT_FN} $HTL_FN > /dev/null
@@ -58,8 +58,8 @@ run_ojph_nlt() {
 
   for q in $HT_Q; do
     HT_FN="${FN%.exr}.ht.${q}.exr"
-    PIZ_FN="${FN%.exr}.ht.${q}.piz.exr"
-    HTL_FN="${FN%.exr}.ht.${q}.htl.exr"
+    PIZ_FN="${FN%.exr}.ojph.nlt.${q}.piz.exr"
+    HTL_FN="${FN%.exr}.ojph.nlt.${q}.htl.exr"
     ./bin/exrj2klossy_enc ${SRC} ${HT_FN} -q ${q} > /dev/null
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec ${HT_FN} $HTL_FN > /dev/null
