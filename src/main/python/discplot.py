@@ -21,8 +21,8 @@ LUM_WEIGHTS = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 
 def to_display(img, ref_lum):
     """Linear tone-map img so that [ref_lum/16, ref_lum*16] maps to [0, 1]."""
-    lo = ref_lum / 1.2
-    hi = ref_lum * 1.2
+    lo = ref_lum / 1.7
+    hi = ref_lum * 1.7
     return np.clip((img - lo) / (hi - lo), 0, 1)
 
 
@@ -107,16 +107,14 @@ def main():
     ax.imshow(zoomed, interpolation="nearest", origin="upper")
     ax.axis("off")
 
-    # Sector labels placed at the midpoint angle of each sector, 55% of the radius out
+    # Sector labels placed just outside the disc at each sector's midpoint angle
     sector_labels = [f"R\n{args.R}", f"A\n{args.A}", f"B\n{args.B}"]
     for s, label in enumerate(sector_labels):
         mid_angle = (s + 0.5) * (2 * np.pi / 3)
         # canvas coords before zoom: angle a → x=cos(a), y=-sin(a) (since angle=arctan2(-ys,xs))
-        lx = (radius + 0.55 * radius * np.cos(mid_angle)) * 4
-        ly = (radius - 0.55 * radius * np.sin(mid_angle)) * 4
-        ax.text(lx, ly, label, ha="center", va="center", fontsize=7,
-                color="white", fontweight="bold",
-                bbox=dict(boxstyle="round,pad=0.2", fc="black", alpha=0.4, lw=0))
+        lx = (radius + 1.15 * radius * np.cos(mid_angle)) * 4
+        ly = (radius - 1.15 * radius * np.sin(mid_angle)) * 4
+        ax.text(lx, ly, label, ha="center", va="center", fontsize=7)
 
     ax.set_title(f"Disc centred at ({cx}, {cy}), radius {radius}px", fontsize=10)
     plt.tight_layout()
