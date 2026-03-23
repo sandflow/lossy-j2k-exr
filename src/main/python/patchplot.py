@@ -67,7 +67,7 @@ def main():
     # Extract, tone-map and zoom patches; order is A, R, B
     images = [A, R, B]
     titles = [f"A — {args.A}", f"R — {args.R}", f"B — {args.B}"]
-    patches = [zoom_nearest(to_display(extract_patch(img, cx, cy), scale)[:, :, :3], 8)
+    patches = [zoom_nearest(to_display(extract_patch(img, cx, cy, 16), scale)[:, :, :3], 8)
                for img in images]
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
