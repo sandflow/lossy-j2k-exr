@@ -16,8 +16,8 @@ run_dwa() {
     DWA_FN="${FN%.exr}.dwa.${q}.exr"
     ./bin/exrmetrics ${SRC} -z dwab --convert -o ${DWA_FN} -l ${q}
     SIZE=$(stat -c%s -- "$DWA_FN")
-    MSE=$(./bin/exrmse -n ${SRC} ${DWA_FN})
-    MSEA=$(./bin/exrmse -a ${SRC} ${DWA_FN})
+    MSE=$(./bin/exrmse --nlt dwa ${SRC} ${DWA_FN})
+    MSEA=$(./bin/exrmse --nlt asinh ${SRC} ${DWA_FN})
     echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
@@ -39,8 +39,8 @@ run_ojph_dwa() {
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec -t ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
-    MSE=$(./bin/exrmse -n  ${SRC} ${PIZ_FN})
-    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
+    MSE=$(./bin/exrmse --nlt dwa ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse --nlt asinh ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
     echo "${q},${MSE},${MSEA},${SIZE}"
@@ -64,8 +64,8 @@ run_ojph_nlt() {
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec ${HT_FN} $HTL_FN > /dev/null
     ./bin/exrmetrics ${HTL_FN} -z piz --convert -o ${PIZ_FN}
-    MSE=$(./bin/exrmse -n ${SRC} ${PIZ_FN})
-    MSEA=$(./bin/exrmse -a ${SRC} ${PIZ_FN})
+    MSE=$(./bin/exrmse --nlt dwa ${SRC} ${PIZ_FN})
+    MSEA=$(./bin/exrmse --nlt asinh ${SRC} ${PIZ_FN})
     rm ${HT_FN}
     rm ${HTL_FN}
     echo "${q},${MSE},${MSEA},${SIZE}"

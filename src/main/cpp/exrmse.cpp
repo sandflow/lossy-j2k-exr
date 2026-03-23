@@ -140,6 +140,8 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
     dif(exr_finish(&f));
 }
 
+enum class NLT { none, dwa, asinh };
+
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
@@ -148,8 +150,7 @@ int main(int argc, char *argv[])
     options.add_options()(
         "apath", "Image A path", cxxopts::value<std::string>())(
         "bpath", "Image B path", cxxopts::value<std::string>())(
-        "n", "NLT MSE")(
-        "a", "arcsinh MSE");
+        "nlt", "NLT type: dwa, asinh, or none", cxxopts::value<std::string>()->default_value("none"));
 
     options.parse_positional({"apath", "bpath"});
 
@@ -163,8 +164,18 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    bool nlt_mse = args.count("n") == 1;
-    bool arcsinh_mse = args.count("a") == 1;
+    auto nlt_str = args["nlt"].as<std::string>();
+    NLT nlt;
+    if (nlt_str == "dwa")
+        nlt = NLT::dwa;
+    else if (nlt_str == "asinh")
+        nlt = NLT::asinh;
+    else if (nlt_str == "none")
+        nlt = NLT::none;
+    else {
+        std::cout << "Unknown NLT type" << std::endl;
+        exit(-1);
+    }
 
     exr_result_t r;
 
@@ -219,12 +230,20 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        double a_pix = nlt_mse ? from_linear((float) a_bits) : (float) a_bits;
-        double b_pix = nlt_mse ? from_linear((float) b_bits) : (float) b_bits;
+        double a_pix = (float) a_bits;
+        double b_pix = (float) b_bits;
 
-        if (arcsinh_mse) {
-            a_pix = std::asinh(a_pix/0.0001);
-            b_pix = std::asinh(b_pix/0.0001);
+        switch (nlt) {
+            case NLT::dwa:
+                a_pix = from_linear(a_pix);
+                b_pix = from_linear(b_pix);
+                break;
+            case NLT::asinh:
+                a_pix = std::asinh(a_pix/0.0001);
+                b_pix = std::asinh(b_pix/0.0001);
+                break;
+            case NLT::none:
+                break;
         }
 
         mse += ((a_pix - b_pix) * (a_pix - b_pix));
