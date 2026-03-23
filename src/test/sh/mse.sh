@@ -26,7 +26,7 @@ run_dwa
 run_ojph_dwa() {
   # generate ojph results
 
-  HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
+  HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008 0.0016"
 
   echo "OJPH"
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
@@ -51,7 +51,7 @@ run_ojph_dwa
 run_ojph_nlt() {
   # generate ojph results
 
-  HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008"
+  HT_Q="0.00005 0.0001 0.0002 0.0004 0.0008 0.0016"
 
   echo "OJPH (linear)"
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"

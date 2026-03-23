@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "dpath", "Decoded image path", cxxopts::value<std::string>())(
         "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"))(
-        "t", "Bespoke NLT");
+        "t", "DWA NLT");
 
     options.parse_positional({"ipath", "dpath"});
 
@@ -52,18 +52,18 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &out_fn = args["dpath"].as<std::string>();
 
-    bool custom_nlt = args.count("t");
+    bool use_dwa_nlt = args.count("t");
 
     exr_result_t r;
 
     ojphl_decoder_data ud;
     ud.skip_rez = args["s"].as<int>();
-    ud.use_nlt = !custom_nlt;
+    ud.use_nlt = !use_dwa_nlt;
 
     kdu_decoder_data kdu_data;
-    kdu_data.use_nlt = !custom_nlt;
+    kdu_data.use_nlt = !use_dwa_nlt;
 
-    bool use_kdu = true;
+    bool use_kdu = false;
 
     /* source file */
 
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
             }
             dif(exr_decoding_run(src_file, part_id, &decoder));
 
-            if (custom_nlt && chunk_buf) {
+            if (use_dwa_nlt && chunk_buf) {
                 half *half_buf = (half *)chunk_buf;
                 int16_t *int16_buf = (int16_t *)chunk_buf;
                 for (size_t i = 0; i < decoder.channels[0].height * width * channels->num_channels; i++)
