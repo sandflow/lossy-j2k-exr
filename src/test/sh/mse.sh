@@ -7,7 +7,7 @@ FN=$(basename "${SRC}")
 
 run_dwa() {
   # generate DWA results
-  DWA_Q="20 40 60 80 100 160"
+  DWA_Q="20 45 60 80 100 160"
 
   echo "DWA"
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
@@ -32,6 +32,7 @@ run_ojph_dwa() {
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $HT_Q; do
+    Q_EXT=${q#0?.}
     HT_FN="${FN%.exr}.ht.${q}.exr"
     PIZ_FN="${FN%.exr}.ojph.dwa.${q}.piz.exr"
     HTL_FN="${FN%.exr}.ojph.dwa.${q}.htl.exr"
@@ -71,7 +72,7 @@ run_ojph_nlt() {
     echo "${q},${MSE},${MSEA},${SIZE}"
   done
 }
-run_ojph_nlt
+# run_ojph_nlt
 
 run_kdu_dwa() {
   # generate KDU results

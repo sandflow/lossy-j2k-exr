@@ -11,6 +11,9 @@ fi
 
 SRC="$1"
 FN=$(basename "${SRC}")
+BASE="${FN%.exr}"
+NAME="${BASE%.*}"
+FRAME="${BASE##*.}"
 ORIG_SIZE=$(stat -c%s -- "$SRC")
 
 #second parameter
@@ -27,7 +30,7 @@ fi
 
 # generate DWA results
 DWA_Q="100"
-DWA_FN="${FN%.exr}.dwa.${q}.exr"
+DWA_FN="${NAME}.dwa.${DWA_Q}.${FRAME}.exr"
 ./bin/exrmetrics ${SRC} -z dwab --convert -o ${DWA_FN} -l ${DWA_Q}
 DWA_SIZE=$(stat -c%s -- "$DWA_FN")
 DWA_MSE=$(./bin/exrmse ${SRC} ${DWA_FN} ${MSE_ARG})
@@ -58,9 +61,10 @@ echo "Q,MSE,size,diff"
 while true; do
     HT_Q=$(echo "scale=6; ($MIN + $MAX) / 2" | bc)
 
-    HT_FN="${FN%.exr}.ojph.${HT_Q}.exr"
-    HTL_FN="${FN%.exr}.htl.${HT_Q}.exr"
-    PIZ_FN="${FN%.exr}.ojph.${HT_Q}.piz.exr"
+    Q_EXT=${HT_Q#.}
+    HT_FN="${NAME}.ojph.${Q_EXT}.${FRAME}.exr"
+    HTL_FN="${NAME}.htl.${Q_EXT}.${FRAME}.exr"
+    PIZ_FN="${NAME}.ojph.piz.${Q_EXT}.${FRAME}.exr"
     ./bin/exrj2klossy_enc ${SRC} ${HT_FN} -q ${HT_Q} ${OJPH_ARG} > /dev/null
     HT_SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec ${OJPH_ARG} ${HT_FN} ${HTL_FN} > /dev/null
