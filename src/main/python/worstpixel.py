@@ -50,14 +50,14 @@ def main():
 
     # Relative difference between R and A, max across channels
     eps = 1e-6
-    rel_diff = np.max(np.abs(R - A), axis=2)
+    rel_diff = np.max(np.abs(R - A) / (np.abs(R[:, :, :3]) + eps), axis=2)
 
     # Mask non-finite pixels
     finite = np.all(np.isfinite(R), axis=2) & np.all(np.isfinite(A), axis=2)
     rel_diff[~finite] = 0
 
-    # Find the 16x16 block with the highest mean relative difference
-    block = 16
+    # Find the block with the highest mean relative difference
+    block = 32
     bh = height // block
     bw = width // block
     trimmed = rel_diff[:bh * block, :bw * block]
@@ -70,7 +70,7 @@ def main():
     print(f"Worst 16×16 block top-left: ({bx * block}, {by * block}), mean relative difference: {block_means[by, bx]:.6f}")
 
     # Extract 64x64 patch centred at Z, clamped to image bounds
-    half = 32
+    half = block // 2
     y0 = max(0, zy - half)
     y1 = min(height, zy + half)
     x0 = max(0, zx - half)
@@ -95,7 +95,7 @@ def main():
         ax.axis("off")
 
     fig.suptitle(
-        f"64×64 patch centred on worst 16×16 block at Z=({zx},{zy}), zoomed 8×",
+        f"Worst {block}×{block} block at (x,y)=({zx},{zy}), zoomed 8×",
         fontsize=11)
     plt.tight_layout()
     plt.savefig(args.output, dpi=150)

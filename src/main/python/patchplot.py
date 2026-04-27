@@ -18,9 +18,10 @@ def read_exr(path):
     return pixels
 
 
-def to_display(img, scale):
-    """Linear tone-map: multiply by scale so that ref pixel lands at 0.5."""
-    return np.clip(img * scale, 0, 1)
+def to_display(img, lum_min, lum_max):
+    """Tone-map so lum_min→0, lum_max→1 (ref pixel at 0.5 when lum_min/max = ±10% of ref)."""
+    span = lum_max - lum_min if lum_max > lum_min else 1.0
+    return np.clip((img - lum_min) / span, 0, 1)
 
 
 def extract_patch(img, cx, cy, half=32):
@@ -57,17 +58,18 @@ def main():
         print(f"Error: image shapes differ: {R.shape}, {A.shape}, {B.shape}")
         sys.exit(1)
 
-    # Tone-map scale: pixel at P in R should map to luminance 0.5
+    # Tone-map: ref pixel at 0.5; 0 = 90% of ref lum, 1 = 110% of ref lum
     ref_lum = float(np.dot(np.clip(R[cy, cx, :3], 0, None), LUM_WEIGHTS))
     if ref_lum <= 0:
         ref_lum = 1e-3
-    scale = 0.5 / ref_lum
-    print(f"Reference luminance at ({cx}, {cy}): {ref_lum:.6f}, scale: {scale:.4f}")
+    lum_min = 0.9 * ref_lum
+    lum_max = 1.1 * ref_lum
+    print(f"Reference luminance at ({cx}, {cy}): {ref_lum:.6f}, display range: [{lum_min:.6f}, {lum_max:.6f}]")
 
     # Extract, tone-map and zoom patches; order is A, R, B
     images = [A, R, B]
     titles = [f"A — {args.A}", f"R — {args.R}", f"B — {args.B}"]
-    patches = [zoom_nearest(to_display(extract_patch(img, cx, cy, 16), scale)[:, :, :3], 8)
+    patches = [zoom_nearest(to_display(extract_patch(img, cx, cy, 16), lum_min, lum_max)[:, :, :3], 8)
                for img in images]
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))

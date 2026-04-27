@@ -4,6 +4,9 @@ set -e
 
 SRC="${1:-SPARKS_ACES_07500.exr}"
 FN=$(basename "${SRC}")
+BASE="${FN%.exr}"
+NAME="${BASE%.*}"
+FRAME="${BASE##*.}"
 
 run_dwa() {
   # generate DWA results
@@ -13,7 +16,7 @@ run_dwa() {
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $DWA_Q; do
-    DWA_FN="${FN%.exr}.dwa.${q}.exr"
+    DWA_FN="${NAME}.dwa.${q}.${FRAME}.exr"
     ./bin/exrmetrics ${SRC} -z dwab --convert -o ${DWA_FN} -l ${q}
     SIZE=$(stat -c%s -- "$DWA_FN")
     MSE=$(./bin/exrmse --nlt dwa ${SRC} ${DWA_FN})
@@ -32,10 +35,10 @@ run_ojph_dwa() {
   echo "Q, MSE (dwa), MSE (arcsinh), SIZE"
 
   for q in $HT_Q; do
-    Q_EXT=${q#0?.}
-    HT_FN="${FN%.exr}.ht.${q}.exr"
-    PIZ_FN="${FN%.exr}.ojph.dwa.${q}.piz.exr"
-    HTL_FN="${FN%.exr}.ojph.dwa.${q}.htl.exr"
+    Q_EXT=${q/./_}
+    HT_FN="${NAME}.ojph.${Q_EXT}.${FRAME}.exr"
+    HTL_FN="${NAME}.htl.${Q_EXT}.${FRAME}.exr"
+    PIZ_FN="${NAME}.ojph.piz.${Q_EXT}.${FRAME}.exr"
     ./bin/exrj2klossy_enc ${SRC} ${HT_FN} -q ${q} -t > /dev/null
     SIZE=$(stat -c%s -- "$HT_FN")
     ./bin/exrj2klossy_dec -t ${HT_FN} $HTL_FN > /dev/null
