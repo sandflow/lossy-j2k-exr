@@ -368,7 +368,11 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
     if (!encode->encoding_user_data)
         return EXR_ERR_INVALID_ARGUMENT;
 
-    float q_step = static_cast<ojphl_encoder_data*>(encode->encoding_user_data)->q_step;
+    ojphl_encoder_data* ud = static_cast<ojphl_encoder_data *>(encode->encoding_user_data);
+
+
+    float q_step = ud->q_step;
+    bool use_nlt = ud->use_nlt;
 
     std::vector<CodestreamChannelInfo> cs_to_file_ch (encode->channel_count);
     bool                               isRGB = make_channel_map (
@@ -388,7 +392,7 @@ ht_apply_impl (exr_encode_pipeline_t* encode)
     for (int16_t c = 0; c < encode->channel_count; c++)
     {
         int file_c = cs_to_file_ch[c].file_index;
-        if (encode->channels[file_c].data_type != EXR_PIXEL_UINT)
+        if (encode->channels[file_c].data_type != EXR_PIXEL_UINT && use_nlt)
             nlt.set_nonlinear_transform (
                 c,
                 ojph::param_nlt::nonlinearity::OJPH_NLT_BINARY_COMPLEMENT_NLT);

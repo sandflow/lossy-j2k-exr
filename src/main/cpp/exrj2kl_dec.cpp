@@ -8,13 +8,16 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "kdu.h"
 
 #include "cxxopts.hpp"
+#include <half.h>
+#include "nlt.h"
 
 #define MAX_CHANNEL_COUNT 32
 #define MAX_PART_COUNT 128
 
-void dif(exr_result_t r)
+static void dif(exr_result_t r)
 {
     if (r != EXR_ERR_SUCCESS)
     {
@@ -26,12 +29,13 @@ void dif(exr_result_t r)
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
-        "ojphl_enc", "J2K lossy EXR decoder");
+        "exrj2kl_dec", "J2K lossy EXR decoder");
 
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "dpath", "Decoded image path", cxxopts::value<std::string>())(
-        "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"));
+        "s", "Number of resolution layers to skip", cxxopts::value<int>()->default_value("0"))(
+        "t", "DWA NLT");
 
     options.parse_positional({"ipath", "dpath"});
 
@@ -48,11 +52,18 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &out_fn = args["dpath"].as<std::string>();
 
+    bool use_dwa_nlt = args.count("t");
+
     exr_result_t r;
 
     ojphl_decoder_data ud;
-
     ud.skip_rez = args["s"].as<int>();
+    ud.use_nlt = !use_dwa_nlt;
+
+    kdu_decoder_data kdu_data;
+    kdu_data.use_nlt = !use_dwa_nlt;
+
+    bool use_kdu = false;
 
     /* source file */
 
@@ -201,7 +212,7 @@ int main(int argc, char *argv[])
             {
                 dif(
                     exr_decoding_choose_default_routines(src_file, part_id, &decoder));
-                decoder.decompress_fn = ojphl_decompress;
+                decoder.decompress_fn =  use_kdu ? kdu_decompress : ojphl_decompress;
                 decoder.decoding_user_data = &ud;
 
                 dif(
@@ -210,6 +221,16 @@ int main(int argc, char *argv[])
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
             }
             dif(exr_decoding_run(src_file, part_id, &decoder));
+
+            if (use_dwa_nlt && chunk_buf) {
+                half *half_buf = (half *)chunk_buf;
+                int16_t *int16_buf = (int16_t *)chunk_buf;
+                for (size_t i = 0; i < decoder.channels[0].height * width * channels->num_channels; i++)
+                {
+                    half_buf[i] = int16_to_half(int16_buf[i]);
+                }
+            }
+
             dif(exr_encoding_run(out_file, part_id, &encoder));
 
             first = false;

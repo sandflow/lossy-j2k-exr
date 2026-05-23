@@ -8,13 +8,14 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "nlt.h"
 
 #include "cxxopts.hpp"
 #include <float.h>
 #include <half.h>
 
 
-#define CHANNEL_COUNT 3
+#define CHANNEL_COUNT 6
 
 void dif(exr_result_t r)
 {
@@ -25,7 +26,7 @@ void dif(exr_result_t r)
     }
 }
 
-void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr_pixel_type_t &pixelType)
+int read_image(std::string path, uint8_t **buffer, int &width, int &height, exr_pixel_type_t &pixelType, int partIndex)
 {
     exr_context_t f;
     dif(exr_start_read(&f, path.c_str(), NULL));
@@ -33,9 +34,9 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
     int partCount;
     dif(exr_get_count(f, &partCount));
 
-    if (partCount != 1)
+    if (partCount <= partIndex)
     {
-        std::cout << "The files must contain at most one part" << std::endl;
+        std::cout << "Requested part does not exist" << std::endl;
         exit(-1);
     }
 
@@ -48,15 +49,16 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
     }
 
     const exr_attr_chlist_t *channels;
-    dif(exr_get_channels(f, 0, &channels));
-    if (channels->num_channels != CHANNEL_COUNT)
+    dif(exr_get_channels(f, partIndex, &channels));
+    if (channels->num_channels > CHANNEL_COUNT)
     {
-        std::cout << "The files must contain exactly three channels" << std::endl;
+        std::cout << "Max channel count exceeded" << std::endl;
         exit(-1);
     }
+    int numChannels = channels->num_channels;
 
     exr_attr_box2i_t dw;
-    dif(exr_get_data_window(f, 0, &dw));
+    dif(exr_get_data_window(f, partIndex, &dw));
     width = dw.max.x - dw.min.x + 1;
     height = dw.max.y - dw.min.y + 1;
 
@@ -91,20 +93,20 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
     exr_chunk_info_t out_chunk;
 
     int32_t scansperchunk;
-    dif(exr_get_scanlines_per_chunk(f, 0, &scansperchunk));
+    dif(exr_get_scanlines_per_chunk(f, partIndex, &scansperchunk));
 
     uint8_t *chunk_buf = *buffer;
     for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
     {
-        dif(exr_read_scanline_chunk_info(f, 0, y, &src_chunk));
+        dif(exr_read_scanline_chunk_info(f, partIndex, y, &src_chunk));
 
         if (first)
         {
-            dif(exr_decoding_initialize(f, 0, &src_chunk, &decoder));
+            dif(exr_decoding_initialize(f, partIndex, &src_chunk, &decoder));
         }
         else
         {
-            dif(exr_decoding_update(f, 0, &src_chunk, &decoder));
+            dif(exr_decoding_update(f, partIndex, &src_chunk, &decoder));
         }
 
         for (int ch_id = 0; ch_id < decoder.channel_count; ++ch_id)
@@ -127,9 +129,9 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
         if (first)
         {
             dif(
-                exr_decoding_choose_default_routines(f, 0, &decoder));
+                exr_decoding_choose_default_routines(f, partIndex, &decoder));
         }
-        dif(exr_decoding_run(f, 0, &decoder));
+        dif(exr_decoding_run(f, partIndex, &decoder));
 
         first = false;
         chunk_buf += linestride * scansperchunk;
@@ -137,7 +139,11 @@ void read_image(std::string path, uint8_t **buffer, int &width, int &height, exr
 
     dif(exr_decoding_destroy(f, &decoder));
     dif(exr_finish(&f));
+
+    return numChannels;
 }
+
+enum class NLT { none, dwa, asinh };
 
 int main(int argc, char *argv[])
 {
@@ -146,7 +152,9 @@ int main(int argc, char *argv[])
 
     options.add_options()(
         "apath", "Image A path", cxxopts::value<std::string>())(
-        "bpath", "Image B path", cxxopts::value<std::string>());
+        "bpath", "Image B path", cxxopts::value<std::string>())(
+        "p", "Part", cxxopts::value<int>()->default_value("0"))(
+        "nlt", "NLT type: dwa, asinh, or none", cxxopts::value<std::string>()->default_value("none"));
 
     options.parse_positional({"apath", "bpath"});
 
@@ -160,17 +168,34 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    auto nlt_str = args["nlt"].as<std::string>();
+    NLT nlt;
+    if (nlt_str == "dwa")
+        nlt = NLT::dwa;
+    else if (nlt_str == "asinh")
+        nlt = NLT::asinh;
+    else if (nlt_str == "none")
+        nlt = NLT::none;
+    else {
+        std::cout << "Unknown NLT type" << std::endl;
+        exit(-1);
+    }
+
     exr_result_t r;
+
+    /* part */
+
+    int partIndex = args["p"].as<int>();
 
     /* file A */
 
     auto &a_fn = args["apath"].as<std::string>();
 
     uint8_t *a_buf;
-    int a_width, a_height;
+    int a_width, a_height, a_num_channels, b_num_channels;
     exr_pixel_type_t a_pixeltype;
 
-    read_image(a_fn, &a_buf, a_width, a_height, a_pixeltype);
+    a_num_channels = read_image(a_fn, &a_buf, a_width, a_height, a_pixeltype, partIndex);
 
     /* file B */
 
@@ -180,12 +205,12 @@ int main(int argc, char *argv[])
     int b_width, b_height;
     exr_pixel_type_t b_pixeltype;
 
-    read_image(b_fn, &b_buf, b_width, b_height, b_pixeltype);
+    b_num_channels = read_image(b_fn, &b_buf, b_width, b_height, b_pixeltype, partIndex);
 
     /* compare images */
 
     if (a_width != b_width || a_height != b_height ||
-        a_pixeltype != b_pixeltype)
+        a_pixeltype != b_pixeltype || a_num_channels != b_num_channels)
     {
         std::cout << "Image dimensions or pixel types do not match"
                   << std::endl;
@@ -199,21 +224,41 @@ int main(int argc, char *argv[])
     }
 
     double mse = 0.0;
-
-    for (size_t i = 0; i < a_width * a_height; i++)
+    int count = 0;
+    for (size_t i = 0; i < a_width * a_height * a_num_channels; i++)
     {
         half a_bits;
         a_bits.setBits (*(uint16_t*)(a_buf + i * 2));
-        double a_pix = asinh(static_cast<double>(a_bits)/6.10e-10);
 
         half b_bits;
         b_bits.setBits (*(uint16_t*)(b_buf + i * 2));
-        double b_pix = asinh(static_cast<double>(b_bits)/6.10e-10);
 
-        mse += (a_pix - b_pix) * (a_pix - b_pix);
+        if (!a_bits.isFinite() || !b_bits.isFinite())
+        {
+            continue;
+        }
+
+        double a_pix = (float) a_bits;
+        double b_pix = (float) b_bits;
+
+        switch (nlt) {
+            case NLT::dwa:
+                a_pix = from_linear(a_pix);
+                b_pix = from_linear(b_pix);
+                break;
+            case NLT::asinh:
+                a_pix = std::asinh(a_pix/0.0001);
+                b_pix = std::asinh(b_pix/0.0001);
+                break;
+            case NLT::none:
+                break;
+        }
+
+        mse += ((a_pix - b_pix) * (a_pix - b_pix));
+        count++;
     }
 
-    mse /= (a_width * a_height);
+    mse /= count;
 
     std::cout << mse << std::endl;
 

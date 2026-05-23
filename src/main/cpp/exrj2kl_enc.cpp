@@ -8,13 +8,17 @@
 
 #include <openexr.h>
 #include "ojphl.h"
+#include "kdu.h"
 
 #include "cxxopts.hpp"
+#include <half.h>
+#include <assert.h>
+#include "nlt.h"
 
 #define MAX_CHANNEL_COUNT 32
 #define MAX_PART_COUNT 128
 
-void dif(exr_result_t r)
+static void dif(exr_result_t r)
 {
     if (r != EXR_ERR_SUCCESS)
     {
@@ -26,12 +30,14 @@ void dif(exr_result_t r)
 int main(int argc, char *argv[])
 {
     cxxopts::Options options(
-        "ojphl_enc", "J2K lossy EXR encoder");
+        "exrj2kl_enc", "J2K lossy EXR encoder");
 
     options.add_options()(
         "ipath", "Input image path", cxxopts::value<std::string>())(
         "epath", "Encoded image path", cxxopts::value<std::string>())(
-        "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"));
+        "q", "Quantization step", cxxopts::value<float>()->default_value("0.000015"))(
+        "r", "Compression ratio", cxxopts::value<float>()->default_value("-1.0"))(
+        "t", "DWA NLT");
 
     options.parse_positional({"ipath", "epath"});
 
@@ -48,11 +54,17 @@ int main(int argc, char *argv[])
     auto &src_fn = args["ipath"].as<std::string>();
     auto &enc_fn = args["epath"].as<std::string>();
 
+    bool dwa_nlt = args.count("t");
+
     exr_result_t r;
 
-    ojphl_encoder_data ud;
+    ojphl_encoder_data ojph_data;
+    ojph_data.q_step = args["q"].as<float>();
+    ojph_data.use_nlt = !dwa_nlt;
 
-    ud.q_step = args["q"].as<float>();
+    kdu_encoder_data kdu_data;
+    kdu_data.ratio = args["r"].as<float>();
+    kdu_data.use_nlt = !dwa_nlt;
 
     /* source file */
 
@@ -191,6 +203,18 @@ int main(int argc, char *argv[])
         exr_chunk_info_t enc_chunk;
         dif(exr_get_scanlines_per_chunk(enc_file, part_id, &scansperchunk));
         chunk_buf = baseband_bufs[part_id];
+
+        if (dwa_nlt) {
+
+            half *half_buf = (half *)chunk_buf;
+            int16_t *int16_buf = (int16_t *)chunk_buf;
+            for (size_t i = 0; i < height * width * channels->num_channels; i++)
+            {
+                int16_buf[i] = half_to_int16(half_buf[i]);
+            }
+
+        }
+
         for (int y = dw.min.y; y <= dw.max.y; y += scansperchunk)
         {
             dif(exr_write_scanline_chunk_info(enc_file, part_id, y, &enc_chunk));
@@ -227,8 +251,13 @@ int main(int argc, char *argv[])
                     exr_encoding_choose_default_routines(enc_file, part_id, &encoder));
                 encoder.compressed_bytes = scansperchunk * linestride;
                 encoder.compressed_buffer = malloc(encoder.compressed_bytes);
-                encoder.encoding_user_data = &ud;
-                encoder.compress_fn = ojphl_compress;
+                if (kdu_data.ratio > 1.0f) {
+                    encoder.encoding_user_data = &kdu_data;
+                    encoder.compress_fn = kdu_compress;
+                } else {
+                    encoder.encoding_user_data = &ojph_data;
+                    encoder.compress_fn = ojphl_compress;
+                }
             }
             dif(exr_encoding_run(enc_file, part_id, &encoder));
 

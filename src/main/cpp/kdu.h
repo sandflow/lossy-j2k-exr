@@ -27,29 +27,28 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OJPHL_H
-#define OJPHL_H
+#ifndef KDU_H
+#define KDU_H
 
 #include "openexr_decode.h"
 #include "openexr_encode.h"
 
-struct ojphl_encoder_data
+struct kdu_encoder_data
 {
-  float q_step;
+  float ratio;
   bool use_nlt;
 };
 
-struct ojphl_decoder_data
+struct kdu_decoder_data
 {
-  int skip_rez;
   bool use_nlt;
 };
 
+extern "C" exr_result_t
+kdu_decompress (exr_decode_pipeline_t* decode);
 
 extern "C" exr_result_t
-ojphl_decompress(exr_decode_pipeline_t *decode);
+kdu_compress (exr_encode_pipeline_t* encode);
 
-extern "C" exr_result_t
-ojphl_compress(exr_encode_pipeline_t *encode);
 
 #endif
